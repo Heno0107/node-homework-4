@@ -9,13 +9,12 @@ http.createServer(async (req , res) => {
     } else if (req.url === '/api/users' && req.method === 'GET') {
         const users = await readFile('db' , 'users.json')
         response(res , 200 , 'application/json' , users)
-    } else if (req.url.match(/\/api\/users\/([0-9]+)/) && req.method === 'GET') {
+    } else if (req.url.match(/^\/api\/users\/[1-5]$/) && req.method === 'GET') {
         const id = req.url.split('/')[3]
         const data = await readFile('db' , 'users.json')
-        const error = await readFile('pages' , 'error.html')
         const users = JSON.parse(data)
         const user = users.find(user => user.id === id)
-        response(res , user ? 200 : 404, user ? 'application/json' : 'text/html' , user ? JSON.stringify(user) : error)
+        response(res , 200 , 'application/json' , JSON.stringify(user))
     } else {
         const html = await readFile('pages' , 'error.html')
         response(res , 404 , 'text/html' , html)
