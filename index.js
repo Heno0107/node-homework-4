@@ -53,6 +53,18 @@ http.createServer(async (req , res) => {
                 res.end('Something Went Wrong')
             }
         })
+    } else if (req.url.match(/\/api\/users\/([0-9]+)/) && req.method === 'DELETE') {
+        const users = JSON.parse(await readFile('db' , 'users.json'))
+        const id = req.url.split('/').at(-1)
+        const user = users.find((user) => user.id === id)
+        if (user) {
+            const filteredUsers = users.filter((user) => user.id !== id)
+            response(res , 200 , 'application/json' , JSON.stringify(filteredUsers))
+            await fs.unlink(path.join(__dirname , 'db' , 'users.json'))
+            await fs.appendFile(path.join(__dirname , 'db' , 'users.json') , JSON.stringify(filteredUsers))
+        } else {
+            res.end('Wrong User Id')
+        }
     } else {
         const html = await readFile('pages' , 'error.html')
         response(res , 404 , 'text/html' , html)
@@ -85,4 +97,8 @@ http.createServer(async (req , res) => {
 //         name : 'Miro'
 //         email : 'miro@gmail.com'
 //     })
+// }).then((res) => res.json()).then((res) => console.log(res))
+
+// fetch('http://localhost:3000/api/users/4' , {
+//     method : 'DELETE'
 // }).then((res) => res.json()).then((res) => console.log(res))
