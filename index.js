@@ -21,20 +21,39 @@ http.createServer(async (req , res) => {
     } else if (req.url.includes('?') && req.method === 'GET') {
         const searchIndex = req.url.indexOf('?')
         const query = req.url.slice(searchIndex + 1)
+        const key = query.split('=').at(-2).toLowerCase()
         const value = query.split('=').at(-1).toLowerCase()
         const error = await readFile('pages' , 'error.html')
         const users = JSON.parse(await readFile('db' , 'users.json'))
-        const result = users.filter((user) => user.name.toLowerCase().indexOf(value) !== -1)
-        response(res , result.length ? 200 : 404 , result.length ? 'application/json' : 'text/html' , result.length ? JSON.stringify(result) : error)
+        if (key === 'name') {
+            const result = users.filter((user) => user.name.toLowerCase().indexOf(value) !== -1)
+            response(res , result.length ? 200 : 404 , result.length ? 'application/json' : 'text/html' , result.length ? JSON.stringify(result) : error)
+        } else if (key === 'age' && value === 'min') {
+            const result = users.toSorted((a , b) => a.age - b.age)
+            response(res , result.length ? 200 : 404 , result.length ? 'application/json' : 'text/html' , result.length ? JSON.stringify(result) : error)
+        } else if (key === 'age' && value === 'max') {
+            const result = users.toSorted((a , b) => b.age - a.age)
+            response(res , result.length ? 200 : 404 , result.length ? 'application/json' : 'text/html' , result.length ? JSON.stringify(result) : error)
+        } else {
+            response(res , 404 , 'text/html' , error)
+        }
     } else if (req.url === '/api/users' && req.method === 'POST') {
         req.on('data' , async (chunk) => {
             const body = JSON.parse(chunk.toString())
             body.id = Date.now().toString()
             const users = JSON.parse(await readFile('db' , 'users.json'))
-            users.push(body)
-            await fs.unlink(path.join(__dirname , 'db' , 'users.json'))
-            await fs.appendFile(path.join(__dirname , 'db' , 'users.json') , JSON.stringify(users))
-            res.end(JSON.stringify(users))
+            if(body.name && body.age && body.email && body.password) {
+                if(users.find((user) => user.email === body.email)) {
+                    res.end('Email Is Already Used')
+                } else {
+                    users.push(body)
+                    await fs.unlink(path.join(__dirname , 'db' , 'users.json'))
+                    await fs.appendFile(path.join(__dirname , 'db' , 'users.json') , JSON.stringify(users))
+                    res.end(JSON.stringify(users))
+                }
+            } else {
+                res.end('Please Add All Required Fields')
+            }
         })
     } else if (req.url.match(/\/api\/users\/([0-9]+)/) && req.method === 'PATCH') {
         req.on('data' , async (chunk) => {
@@ -46,6 +65,8 @@ http.createServer(async (req , res) => {
                 const userIndex = users.indexOf(user)
                 body.name && (users[userIndex].name = body.name)
                 body.email && (users[userIndex].email = body.email)
+                body.age && (users[userIndex].age = body.age)
+                body.password && (users[userIndex].password = body.password)
                 await fs.unlink(path.join(__dirname , 'db' , 'users.json'))
                 await fs.appendFile(path.join(__dirname , 'db' , 'users.json') , JSON.stringify(users))
                 res.end(JSON.stringify(users))
@@ -84,7 +105,10 @@ http.createServer(async (req , res) => {
 //         "content-type" : 'application/json'
 //     } , 
 //     body : JSON.stringify({
-//         name : 'Miro'
+//         name : 'Heno' ,
+//         age : 17 ,
+//         email : 'heno@gmail.com' ,
+//         password : 'Heno1234'
 //     })
 // }).then((res) => res.json()).then((res) => console.log(res))
 
@@ -94,8 +118,10 @@ http.createServer(async (req , res) => {
 //         "content-type" : 'application/json'
 //     } , 
 //     body : JSON.stringify({
-//         name : 'Miro'
-//         email : 'miro@gmail.com'
+//         name : 'Miro' ,
+//         age : 17 ,
+//         email : 'miro@gmail.com' ,
+//         password : 'miro1234'
 //     })
 // }).then((res) => res.json()).then((res) => console.log(res))
 
